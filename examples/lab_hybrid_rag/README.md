@@ -2,6 +2,8 @@
 
 该目录提供一个可复现的小语料问答检索实验，使用合成的实验室制度文本，不连接 Milvus、PostgreSQL、Redis 或 Docker 服务，也不需要 API 密钥。样例复用 MimirQ 已有的本地 BGE-M3 embedding provider、中文 BM25 分词器、RRF 融合评分和本地 BGE cross-encoder reranker；报告会保留文档来源和命中片段作为引用。
 
+这是一个针对 Hybrid RAG 检索链路的独立实验环境，不是完整 MimirQ 平台的 API 或 UI 启动环境。首轮运行需从 Hugging Face 下载 BGE-M3 权重（约 2.27 GB）；如启用重排，还需下载 BGE reranker 权重。请预留足够磁盘空间，并确保模型站点可访问。
+
 ## 流程
 
 ```text
@@ -20,21 +22,38 @@ python scripts/run_lab_hybrid_rag.py --check
 ```
 
 该检查只验证 JSON schema、引用目标和模型配置，不会导入模型或下载权重。
+运行实际评测时，若调用者没有设置，脚本会为当前进程临时生成 JWT 配置校验所需的随机密钥，并将数据库地址设为内存 SQLite；二者都不会写入文件或覆盖已有环境变量。该样例不会启动服务、创建 JWT 或访问数据库。
+
+## 创建独立 Conda 环境
+
+从仓库根目录运行以下命令。环境定义位于本示例目录，名称为 `mimirq-hybrid-lab`，不会修改其他 Conda 环境，也不安装完整后端、数据库或 OCR 依赖：
+
+```bash
+conda env create -f examples/lab_hybrid_rag/environment.yml
+conda run -n mimirq-hybrid-lab python scripts/run_lab_hybrid_rag.py --check
+```
+
+如果已经创建过该环境，可用以下命令同步依赖：
+
+```bash
+conda env update -n mimirq-hybrid-lab -f examples/lab_hybrid_rag/environment.yml --prune
+```
 
 ## 运行本地评测
 
-项目后端环境需安装仓库依赖，以及本地模型所需的可选依赖：
+从仓库根目录使用隔离环境启动本地合成样例。在 Windows PowerShell 中可先将模型缓存定向到空间充足的磁盘：
 
-```bash
-pip install -r requirements-dev.txt
-pip install sentence-transformers torch
-python scripts/run_lab_hybrid_rag.py --out runs/lab_hybrid_rag.json
+```powershell
+$env:HF_HOME = "D:\models\mimirq-hybrid-lab"
+conda run -n mimirq-hybrid-lab python scripts/run_lab_hybrid_rag.py --out runs/lab_hybrid_rag.json
 ```
 
-首次运行会从模型仓库下载 `BAAI/bge-m3` 和 `BAAI/bge-reranker-v2-m3` 权重。若本机已经缓存权重，可离线运行：
+若本机已经缓存权重，可在 PowerShell 中离线运行：
 
-```bash
-HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python scripts/run_lab_hybrid_rag.py
+```powershell
+$env:HF_HUB_OFFLINE = "1"
+$env:TRANSFORMERS_OFFLINE = "1"
+conda run -n mimirq-hybrid-lab python scripts/run_lab_hybrid_rag.py
 ```
 
 只评估 BGE-M3 向量检索、BM25 和 RRF 时可加 `--skip-reranker`。命令会打印融合排序与重排后排序的 Hit@5、MRR@5；JSON 报告包含逐题指标、模型名、检索配置和最终引用的 `chunk_id`、来源文件名及片段文本。Hit@5 表示前 5 条中至少命中一个标注相关片段的题目比例；MRR@5 是首个相关片段在前 5 条中的倒数排名的平均值。

@@ -5,12 +5,29 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
+import secrets
 import sys
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+# Importing MimirQ's app settings validates JWT configuration even though this
+# standalone in-memory lab never serves requests. Use an ephemeral process-only
+# key when the caller has not supplied one; never write it to disk or override
+# an explicitly configured key.
+os.environ.setdefault("SECRET_KEY", secrets.token_urlsafe(32))
+# App module imports also construct the configured SQLAlchemy engine. Keep this
+# standalone lab self-contained by defaulting to in-memory SQLite unless the
+# caller explicitly selected another database. The lab itself never accesses it.
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+# Keep the documented ``python scripts/run_lab_hybrid_rag.py`` invocation
+# working from any current directory. Python otherwise adds only ``scripts/``
+# to sys.path for a file-based entrypoint, so imports such as ``app.rag`` fail.
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 DEFAULT_CONFIG = REPO_ROOT / "examples" / "lab_hybrid_rag" / "config.json"
 CONFIG_SCHEMA = "mimirq.lab_hybrid_rag.v1"
 CORPUS_SCHEMA = "mimirq.lab_hybrid_rag_corpus.v1"

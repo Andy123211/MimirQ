@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -7,6 +10,23 @@ from scripts.run_lab_hybrid_rag import load_experiment, retrieval_metrics, rrf_r
 
 
 class LabHybridRagTests(unittest.TestCase):
+    def test_cli_check_works_outside_repository_without_runtime_dependencies(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        script = repo_root / "scripts" / "run_lab_hybrid_rag.py"
+
+        with TemporaryDirectory() as temp_dir:
+            result = subprocess.run(
+                [sys.executable, str(script), "--check"],
+                cwd=temp_dir,
+                env={**os.environ, "PYTHONPATH": ""},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("[lab-rag] CONFIG OK", result.stdout)
+
     def test_rrf_rewards_chunks_present_in_both_channels(self) -> None:
         ranked = rrf_rank(["dense", "shared"], ["shared", "bm25"], rrf_k=60)
 
