@@ -2,7 +2,7 @@
 
 该目录提供一个可复现的小语料问答检索实验，使用合成的实验室制度文本，不连接 Milvus、PostgreSQL、Redis 或 Docker 服务，也不需要 API 密钥。样例复用 MimirQ 已有的本地 BGE-M3 embedding provider、中文 BM25 分词器、RRF 融合评分和本地 BGE cross-encoder reranker；报告会保留文档来源和命中片段作为引用。
 
-这是一个针对 Hybrid RAG 检索链路的独立实验环境，不是完整 MimirQ 平台的 API 或 UI 启动环境。首轮运行需从 Hugging Face 下载 BGE-M3 权重（约 2.27 GB）；如启用重排，还需下载 BGE reranker 权重。请预留足够磁盘空间，并确保模型站点可访问。
+这是一个针对 Hybrid RAG 检索链路的独立实验环境，不是完整 MimirQ 平台的 API 或 UI 启动环境。首轮运行需下载 BGE-M3 权重（约 2.27 GB）；如启用重排，还需下载 BGE reranker 权重。优先使用 ModelScope 国内源下载 BGE-M3；请预留足够磁盘空间。
 
 ## 流程
 
@@ -38,6 +38,23 @@ conda run -n mimirq-hybrid-lab python scripts/run_lab_hybrid_rag.py --check
 ```bash
 conda env update -n mimirq-hybrid-lab -f examples/lab_hybrid_rag/environment.yml --prune
 ```
+
+## 从 ModelScope 国内源下载 BGE-M3
+
+在仓库根目录运行。权重保存在仓库之外的独立目录；如网络中断，可重复运行同一命令尝试续传：
+
+```powershell
+conda run -n mimirq-hybrid-lab python scripts/download_lab_bge_m3_modelscope.py
+```
+
+自定义目录可添加 `--local-dir D:\models\mimirq-bge-m3`。下载完成后，运行评测时指定模型目录：
+
+```powershell
+$env:MIMIRQ_BGE_M3_MODEL_PATH = "D:\tool\model-cache\mimirq-modelscope\bge-m3"
+conda run -n mimirq-hybrid-lab python scripts/run_lab_hybrid_rag.py --skip-reranker
+```
+
+本地路径模式直接加载 ModelScope 下载的 Sentence Transformers 模型，不会再访问 Hugging Face。网络检查显示 `HF_ENDPOINT=https://hf-mirror.com` 的大权重请求会重定向到 Hugging Face，因此该权重推荐使用 ModelScope。
 
 ## 运行本地评测
 

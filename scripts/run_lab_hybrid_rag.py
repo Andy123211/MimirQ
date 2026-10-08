@@ -192,7 +192,18 @@ def _run(config: dict[str, Any], corpus: dict[str, Any], *, skip_reranker: bool)
     bm25 = BM25Retriever.from_documents(documents, preprocess_func=tokenize_for_bm25)
     bm25.k = min(int(options["candidate_k"]), len(documents))
 
-    embedder = select_embedding_model(str(runtime["embedding_model_id"]))
+    local_model_path = os.getenv("MIMIRQ_BGE_M3_MODEL_PATH", "").strip()
+    if local_model_path and str(runtime["embedding_model_id"]) == "local/BAAI/bge-m3":
+        from app.rag.embedding.providers.local import SentenceTransformerEmbedding
+
+        model_path = Path(local_model_path).expanduser().resolve()
+        if not model_path.is_dir():
+            raise ValueError(f"MIMIRQ_BGE_M3_MODEL_PATH is not a directory: {model_path}")
+        embedder = SentenceTransformerEmbedding(
+            model=str(model_path), dimension=1024, base_url="local", api_key="no_api_key"
+        )
+    else:
+        embedder = select_embedding_model(str(runtime["embedding_model_id"]))
     all_texts = [str(row["text"]) for row in raw_documents]
     all_texts.extend(str(query["question"]) for query in config["queries"])
     vectors = embedder.encode(all_texts)
