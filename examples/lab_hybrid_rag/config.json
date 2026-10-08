@@ -1,0 +1,41 @@
+{
+  "schema": "mimirq.lab_hybrid_rag.v1",
+  "description": "Synthetic laboratory knowledge QA fixture; no production data.",
+  "runtime": {
+    "embedding_model_id": "local/BAAI/bge-m3",
+    "bm25_tokenizer": "app.rag.preprocessing.tokenization.tokenize_for_bm25",
+    "fusion": "rrf",
+    "rrf_k": 60,
+    "reranker_provider": "local_bge_v2_m3",
+    "reranker_model": "BAAI/bge-reranker-v2-m3"
+  },
+  "retrieval": {
+    "candidate_k": 8,
+    "rerank_top_n": 8,
+    "citation_top_n": 3,
+    "metric_k": 5
+  },
+  "corpus": "knowledge_base.json",
+  "queries": [
+    {
+      "id": "q-booking",
+      "question": "如何预约共聚焦显微镜？",
+      "relevant_chunk_ids": ["instrument-booking"]
+    },
+    {
+      "id": "q-chemical",
+      "question": "挥发性有机溶剂应该怎样存放？",
+      "relevant_chunk_ids": ["chemical-storage"]
+    },
+    {
+      "id": "q-safety",
+      "question": "实验室发生化学品泼洒后先做什么？",
+      "relevant_chunk_ids": ["spill-response"]
+    },
+    {
+      "id": "q-data",
+      "question": "实验数据和原始记录需要保存多久？",
+      "relevant_chunk_ids": ["research-data-retention"]
+    }
+  ]
+}
